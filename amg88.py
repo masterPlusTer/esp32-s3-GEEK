@@ -1,7 +1,6 @@
 #esto es una porqueria, estoy trabajando en esto no esta terminado, lo que pasa que el esp32 s3 geek es muy lindo pero no es intuitivo para nada, no es beginer friendly en absoluto entonces no se logra redondear un proyecto ni con ayuda de la IA , en  fin
 
 
-
 from machine import Pin, SPI, PWM, I2C
 import framebuf
 from micropython_amg88xx import AMG88XX
@@ -44,12 +43,7 @@ class LCD_1inch14(framebuf.FrameBuffer):
 
         super().__init__(self.buffer, self.width, self.height, framebuf.RGB565)
         self.init_display()
-        
-        self.red = 0x07E0
-        self.green = 0x001f
-        self.blue = 0xf800
-        self.white = 0xffff
-        
+    
     def write_cmd(self, cmd):
         self.cs(1)
         self.dc(0)
@@ -119,13 +113,26 @@ class LCD_1inch14(framebuf.FrameBuffer):
         self.spi.write(self.buffer)
         self.cs(1)
     
-    def show_text(self, text, color):
-        self.fill(0x0000)
-        # Centrando texto
-        x = (self.width - len(text) * 8) // 2
-        y = (self.height // 2) - 4
+    def draw_rectangle(self, x, y, w, h, color):
+        for i in range(x, x + w):
+            for j in range(y, y + h):
+                self.pixel(i, j, color)
+
+    def draw_text(self, x, y, text, color):
         self.text(text, x, y, color)
-        self.show()
+
+def temperature_to_color(temp, min_temp=20, max_temp=40):
+    temp = max(min_temp, min(max_temp, temp))
+    scale = (temp - min_temp) / (max_temp - min_temp)
+    if scale < 0.5:
+        red = int(31 * (scale * 2))
+        green = int(63 * scale)
+        blue = 31
+    else:
+        red = 31
+        green = int(63 * (1 - scale))
+        blue = int(31 * (1 - scale))
+    return (red << 11) | (green << 5) | blue
 
 if __name__ == '__main__':
     pwm = PWM(Pin(BL))
@@ -133,20 +140,19 @@ if __name__ == '__main__':
     pwm.duty_u16(65535)
 
     LCD = LCD_1inch14()
-    LCD.show_text("Inicializando...", LCD.red)
     
     if sensor:
         while True:
             try:
                 temperatures = sensor.pixels
-                avg_temp = sum([temp for row in temperatures for temp in row]) / 64
-                msg = f"Temp Prom: {avg_temp:.1f}C"
-                LCD.show_text(msg, LCD.green)
+                LCD.fill(0x0000)
+                pixel_size = 28  # Ajustar para que quepa en el LCD
+                for i, row in enumerate(temperatures):
+                    for j, temp in enumerate(row):
+                        color = temperature_to_color(temp)
+                        LCD.draw_rectangle(j * pixel_size, i * pixel_size, pixel_size, pixel_size, color)
+                        LCD.draw_text(j * pixel_size + 5, i * pixel_size + 5, str(i * 8 + j), 0x0000)
+                LCD.show()
                 time.sleep(1)
             except Exception as e:
-                LCD.show_text("Error sensor", LCD.red)
                 print(f"Error: {e}")
-    else:
-        LCD.show_text("Sensor no encontrado", LCD.red)
-
-
