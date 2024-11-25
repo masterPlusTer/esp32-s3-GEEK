@@ -1,51 +1,152 @@
+#esto es una porqueria, estoy trabajando en esto no esta terminado, lo que pasa que el esp32 s3 geek es muy lindo pero no es intuitivo para nada, no es beginer friendly en absoluto entonces no se logra redondear un proyecto ni con ayuda de la IA , en  fin
+
+
+
+from machine import Pin, SPI, PWM, I2C
+import framebuf
+from micropython_amg88xx import AMG88XX
 import time
-import board
-import busio
-from adafruit_amg88xx import AMG88XX
 
-# Configuración del bus I2C
-print("Iniciando bus I2C...")
-i2c = busio.I2C(board.SCL, board.SDA)
-time.sleep(1)
+# Pines del LCD
+BL = 7
+DC = 8
+CS = 10
+SCK = 12
+MOSI = 11
+RST = 9
 
-# Escaneo I2C con manejo de bloqueos
-print("Escaneando dispositivos I2C...")
-while not i2c.try_lock():
-    pass
+# Configuración del I2C
+i2c = I2C(0, scl=Pin(17), sda=Pin(16), freq=400000)
 
+# Inicializar el sensor
 try:
-    devices = i2c.scan()
-    print("Dispositivos detectados:", [hex(device) for device in devices])
-finally:
-    i2c.unlock()
-
-# Inicializar el sensor AMG88
-try:
-    amg88 = AMG88XX(i2c)
-    print("Sensor AMG88 conectado correctamente.")
-except ValueError as e:
-    print("Error al inicializar el AMG88:", e)
-    print("Verifica las conexiones del sensor.")
-    raise
-
-# Mostrar datos del sensor en el LCD
-print("\n*** Visualización en el LCD ***\n")
-try:
-    while True:
-        # Limpiar pantalla con líneas vacías
-        print("\033c", end="")  # Esto limpia el LCD (ANSI escape para "limpiar pantalla")
-
-        # Título decorativo
-        print("=== Temperaturas del AMG88 ===")
-        print("-----------------------------")
-
-        # Leer y mostrar la matriz de temperaturas
-        for row in amg88.pixels:
-            print(" ".join(["{:5.1f}".format(temp) for temp in row]))  # Formatear filas
-        print("\nActualizando en 1s...\n")
-        time.sleep(1)
-except KeyboardInterrupt:
-    print("Interrumpido por el usuario.")
+    sensor = AMG88XX(i2c)
+    print("Sensor AMG8833 inicializado correctamente.")
 except Exception as e:
-    print("Error al leer datos del AMG88:", e)
+    print(f"Error al inicializar el sensor: {e}")
+    sensor = None
+
+class LCD_1inch14(framebuf.FrameBuffer):
+    def __init__(self):
+        self.width = 240
+        self.height = 135
+        
+        self.cs = Pin(CS, Pin.OUT)
+        self.rst = Pin(RST, Pin.OUT)
+        
+        self.cs(1)
+        self.spi = SPI(1)
+        self.spi = SPI(1, 1000_000)
+        self.spi = SPI(1, 50_000_000, polarity=0, phase=0, sck=Pin(SCK), mosi=Pin(MOSI), miso=None)
+        self.dc = Pin(DC, Pin.OUT)
+        self.dc(1)
+        self.buffer = bytearray(self.height * self.width * 2)
+
+        super().__init__(self.buffer, self.width, self.height, framebuf.RGB565)
+        self.init_display()
+        
+        self.red = 0x07E0
+        self.green = 0x001f
+        self.blue = 0xf800
+        self.white = 0xffff
+        
+    def write_cmd(self, cmd):
+        self.cs(1)
+        self.dc(0)
+        self.cs(0)
+        self.spi.write(bytearray([cmd]))
+        self.cs(1)
+
+    def write_data(self, buf):
+        if isinstance(buf, list):
+            for b in buf:
+                self.cs(1)
+                self.dc(1)
+                self.cs(0)
+                self.spi.write(bytearray([b]))
+                self.cs(1)
+        else:
+            self.cs(1)
+            self.dc(1)
+            self.cs(0)
+            self.spi.write(bytearray([buf]))
+            self.cs(1)
+
+    def init_display(self):
+        self.rst(1)
+        time.sleep(0.1)
+        self.rst(0)
+        time.sleep(0.1)
+        self.rst(1)
+        time.sleep(0.1)
+        
+        self.write_cmd(0x36)
+        self.write_data(0x70)
+        self.write_cmd(0x3A)
+        self.write_data(0x05)
+        self.write_cmd(0xB2)
+        self.write_data([0x0C, 0x0C, 0x00, 0x33, 0x33])
+        self.write_cmd(0xB7)
+        self.write_data(0x35)
+        self.write_cmd(0xBB)
+        self.write_data(0x19)
+        self.write_cmd(0xC0)
+        self.write_data(0x2C)
+        self.write_cmd(0xC2)
+        self.write_data(0x01)
+        self.write_cmd(0xC3)
+        self.write_data(0x12)
+        self.write_cmd(0xC4)
+        self.write_data(0x20)
+        self.write_cmd(0xC6)
+        self.write_data(0x0F)
+        self.write_cmd(0xD0)
+        self.write_data([0xA4, 0xA1])
+        self.write_cmd(0xE0)
+        self.write_data([0xD0, 0x04, 0x0D, 0x11, 0x13, 0x2B, 0x3F, 0x54, 0x4C, 0x18, 0x0D, 0x0B, 0x1F, 0x23])
+        self.write_cmd(0xE1)
+        self.write_data([0xD0, 0x04, 0x0C, 0x11, 0x13, 0x2C, 0x3F, 0x44, 0x51, 0x2F, 0x1F, 0x1F, 0x20, 0x23])
+        self.write_cmd(0x21)
+        self.write_cmd(0x11)
+        time.sleep(0.1)
+        self.write_cmd(0x29)
+    
+    def show(self):
+        self.write_cmd(0x2C)
+        self.cs(1)
+        self.dc(1)
+        self.cs(0)
+        self.spi.write(self.buffer)
+        self.cs(1)
+    
+    def show_text(self, text, color):
+        self.fill(0x0000)
+        # Centrando texto
+        x = (self.width - len(text) * 8) // 2
+        y = (self.height // 2) - 4
+        self.text(text, x, y, color)
+        self.show()
+
+if __name__ == '__main__':
+    pwm = PWM(Pin(BL))
+    pwm.freq(1000)
+    pwm.duty_u16(65535)
+
+    LCD = LCD_1inch14()
+    LCD.show_text("Inicializando...", LCD.red)
+    
+    if sensor:
+        while True:
+            try:
+                temperatures = sensor.pixels
+                avg_temp = sum([temp for row in temperatures for temp in row]) / 64
+                msg = f"Temp Prom: {avg_temp:.1f}C"
+                LCD.show_text(msg, LCD.green)
+                time.sleep(1)
+            except Exception as e:
+                LCD.show_text("Error sensor", LCD.red)
+                print(f"Error: {e}")
+    else:
+        LCD.show_text("Sensor no encontrado", LCD.red)
+
 
