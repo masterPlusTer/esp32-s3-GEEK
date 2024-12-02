@@ -1,12 +1,15 @@
-from GEEK import LCD
+from GEEK import LCD_1inch14
 
-lcd = LCD()
-lcd.llenar_pantalla(0xFFE0)  # Llenar pantalla con amarillo
-lcd.dibujar_circulo(160, 120, 50, 0xF800)  # Dibujar un círculo rojo en el centro
-lcd.dibujar_circulo(150, 130, 50, 0xF800)  # Dibujar un círculo rojo en el centro
-lcd.dibujar_linea(50, 50, 250, 200, 0x07E0)  # Línea verde
-lcd.dibujar_linea(250, 50, 50, 200, 0xF800)  # Línea roja
+# Inicializar la pantalla
+lcd = LCD_1inch14()
 
+# Llenar la pantalla con color blanco
+lcd.fill_color(0xFFFF)
 
-lcd.llenar_pantalla(0x0000)  # Fondo negro
-lcd.dibujar_triangulo(60, 60, 260, 60, 160, 200, 0xFFFF)  # Triángulo blanco
+# Dibujar líneas en la pantalla
+lcd.draw_line(10, 10, 100, 10, 0xF800)  # Línea horizontal roja
+lcd.draw_line(10, 10, 10, 100, 0x07E0)  # Línea vertical verde
+lcd.draw_line(10, 10, 100, 100, 0x001F)  # Línea diagonal azul
+
+# Mostrar los cambios
+lcd.show()
