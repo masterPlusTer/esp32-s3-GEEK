@@ -372,31 +372,33 @@ class LCD_1inch14(framebuf.FrameBuffer):
         self.show()  # Actualizar la pantalla
 
 
-    
     def draw_bmp(self, file_path, x, y):
         """
-        Dibuja una imagen BMP en la pantalla con rotación de 180 grados.
-        Parámetros:
-        - file_path: Ruta del archivo BMP.
-        - x, y: Coordenadas superiores izquierda donde comenzará la imagen.
+        Dibuja una imagen BMP en la pantalla con rotación de 180 grados y soporte para LCD con orden BGR.
         """
+        def le_bytes_to_int(bytes):
+            """Convierte bytes en formato little-endian a entero."""
+            return struct.unpack('<I', bytes)[0]
+
         with open(file_path, "rb") as f:
-            # Leer el encabezado BMP (54 bytes)
+            # Leer y validar el encabezado BMP
             header = f.read(54)
-            if header[:2] != b'BM':
-                raise ValueError("El archivo no es un archivo BMP válido.")
+            if not header.startswith(b'BM'):
+                raise ValueError("El archivo no es un archivo BMP válido")
 
             # Extraer información del encabezado
-            start_pos = int.from_bytes(header[10:14], "little")
-            width = int.from_bytes(header[18:22], "little")
-            height = int.from_bytes(header[22:26], "little")
-            bits_per_pixel = int.from_bytes(header[28:30], "little")
-            compression = int.from_bytes(header[30:34], "little")
+            start_pos = le_bytes_to_int(header[10:14])
+            width = le_bytes_to_int(header[18:22])
+            height = le_bytes_to_int(header[22:26])
+            bits_per_pixel = struct.unpack('<H', header[28:30])[0]
+            compression = le_bytes_to_int(header[30:34])
 
             if compression != 0:
-                raise ValueError("El archivo BMP tiene compresión, lo cual no es soportado.")
+                raise ValueError("El archivo BMP tiene compresión, lo cual no es soportado")
             if bits_per_pixel != 24:
-                raise ValueError("Solo se soporta una profundidad de color de 24 bits.")
+                raise ValueError("Solo se soporta una profundidad de color de 24 bits")
+
+            print(f"Ancho: {width}, Alto: {height}, Inicio de datos: {start_pos}")
 
             # Calcular el tamaño de la fila alineado a 4 bytes
             row_size = (width * 3 + 3) & ~3
@@ -408,14 +410,26 @@ class LCD_1inch14(framebuf.FrameBuffer):
                 row_data = f.read(row_size)
 
                 for col in range(width):
-                    r, g, b = row_data[col * 3:col * 3 + 3]
+                    # Extraer valores b, g, r
+                    b, g, r = row_data[col * 3:col * 3 + 3]
 
-                    # Convertir a RGB565
-                    raw_color = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-                    adjusted_color = self._adjust_color(raw_color)  # Ajustar el color
+                    # Revisar la lógica de conversión a RGB565 con ajustes
+                    red = (r & 0xF8) >> 3   # 5 bits para rojo
+                    green = (g & 0xFC) << 3  # 6 bits para verde
+                    blue = (b & 0xF8) << 8   # 5 bits para azul
 
-                    # Dibuja el píxel en posición rotada 180 grados
-                    self.draw_pixel(x + (width - 1 - col), y + (height - 1 - row), adjusted_color)
+                    # Combinar los bits en un solo valor de 16 bits RGB565
+                    raw_color = red | green | blue
+
+                    # Ajustar para little-endian
+                    raw_color = ((raw_color & 0xFF) << 8) | ((raw_color >> 8) & 0xFF)
+
+                    # Coordenadas ajustadas para rotación de 180 grados
+                    rot_x = x + (width - 1 - col)
+                    rot_y = y + (height - 1 - row)
+
+                    # Dibuja el píxel en la posición rotada
+                    self.draw_pixel(rot_x, rot_y, raw_color)
 
             self.show()  # Actualizar la pantalla
 
