@@ -142,146 +142,25 @@ class LCD_1inch14(framebuf.FrameBuffer):
                 y1 += sy
                 
                 
-    def draw_circle(self, x0, y0, radius, color, fill=False):
+    def draw_generic_shape(self, outline_points, color, fill=False):
         """
-        Dibuja un círculo.
+        Dibuja una figura genérica con bordes y opcionalmente relleno.
         Parámetros:
-        - x0, y0: Coordenadas del centro del círculo.
-        - radius: Radio en píxeles.
+        - outline_points: Lista de tuplas [(x1, y1), (x2, y2), ..., (xn, yn)].
         - color: Color en formato RGB565.
-        - fill: Si es True, llena el círculo. Por defecto, False.
+        - fill: Si es True, llena la figura. Por defecto, False.
         """
         if fill:
-            # Dibujar un círculo lleno
-            for y in range(-radius, radius + 1):
-                for x in range(-radius, radius + 1):
-                    if x**2 + y**2 <= radius**2:  # Ecuación del círculo
-                        self.draw_pixel(x0 + x, y0 + y, color)
-        else:
-            # Dibujar solo los bordes del círculo
-            x = 0
-            y = radius
-            d = 3 - (2 * radius)
-            while x <= y:
-                # Dibujar los puntos en los ocho octantes
-                self.draw_pixel(x0 + x, y0 + y, color)
-                self.draw_pixel(x0 - x, y0 + y, color)
-                self.draw_pixel(x0 + x, y0 - y, color)
-                self.draw_pixel(x0 - x, y0 - y, color)
-                self.draw_pixel(x0 + y, y0 + x, color)
-                self.draw_pixel(x0 - y, y0 + x, color)
-                self.draw_pixel(x0 + y, y0 - x, color)
-                self.draw_pixel(x0 - y, y0 - x, color)
-
-                if d < 0:
-                    d += (4 * x) + 6
-                else:
-                    d += (4 * (x - y)) + 10
-                    y -= 1
-                x += 1
-
-    def draw_square(self, x0, y0, side, color, fill=False):
-        """
-        Dibuja un cuadrado.
-        Parámetros:
-        - x0, y0: Coordenadas de la esquina superior izquierda.
-        - side: Tamaño del lado del cuadrado.
-        - color: Color en formato RGB565.
-        - fill: Si es True, llena el cuadrado. Por defecto, False.
-        """
-        if fill:
-            # Dibujar un cuadrado lleno
-            for x in range(x0, x0 + side):
-                for y in range(y0, y0 + side):
-                    self.draw_pixel(x, y, color)
-        else:
-            # Dibujar solo los bordes del cuadrado
-            for x in range(x0, x0 + side):
-                self.draw_pixel(x, y0, color)            # Línea superior
-                self.draw_pixel(x, y0 + side - 1, color)  # Línea inferior
-            for y in range(y0, y0 + side):
-                self.draw_pixel(x0, y, color)            # Línea izquierda
-                self.draw_pixel(x0 + side - 1, y, color)  # Línea derecha
-
-    def draw_triangle(self, x1, y1, x2, y2, x3, y3, color, fill=False):
-        """
-        Dibuja un triángulo.
-        Parámetros:
-        - x1, y1: Coordenadas del primer vértice.
-        - x2, y2: Coordenadas del segundo vértice.
-        - x3, y3: Coordenadas del tercer vértice.
-        - color: Color en formato RGB565.
-        - fill: Si es True, llena el triángulo. Por defecto, False.
-        """
-        if fill:
-            # Ordenar los vértices por coordenada Y (y1 <= y2 <= y3)
-            if y1 > y2:
-                x1, y1, x2, y2 = x2, y2, x1, y1
-            if y2 > y3:
-                x2, y2, x3, y3 = x3, y3, x2, y2
-            if y1 > y2:
-                x1, y1, x2, y2 = x2, y2, x1, y1
-
-            # Dibujar líneas horizontales entre los bordes
-            def interpolate(y_start, y_end, x_start, x_end):
-                """Interpolar puntos entre dos coordenadas."""
-                if y_start == y_end:  # Evitar división por cero
-                    return []
-                delta_x = x_end - x_start
-                delta_y = y_end - y_start
-                step = delta_x / delta_y
-                x = x_start
-                points = []
-                for y in range(y_start, y_end + 1):
-                    points.append((int(x), y))
-                    x += step
-                return points
-
-            # Interpolaciones para los bordes del triángulo
-            edge1 = interpolate(y1, y2, x1, x2)
-            edge2 = interpolate(y2, y3, x2, x3)
-            edge3 = interpolate(y1, y3, x1, x3)
-
-            # Combinar los puntos y rellenar las líneas horizontales
-            edges = edge1 + edge2 + edge3
-            edges.sort(key=lambda point: point[1])  # Ordenar por coordenada Y
-
-            for i in range(len(edges) - 1):
-                y = edges[i][1]
-                if edges[i][1] == edges[i + 1][1]:  # Mismo Y
-                    x_start = min(edges[i][0], edges[i + 1][0])
-                    x_end = max(edges[i][0], edges[i + 1][0])
-                    for x in range(x_start, x_end + 1):
-                        self.draw_pixel(x, y, color)
-        else:
-            # Dibujar solo los bordes del triángulo
-            self.draw_line(x1, y1, x2, y2, color)  # Línea entre (x1, y1) y (x2, y2)
-            self.draw_line(x2, y2, x3, y3, color)  # Línea entre (x2, y2) y (x3, y3)
-            self.draw_line(x3, y3, x1, y1, color)  # Línea entre (x3, y3) y (x1, y1)
-            
-            
-    def draw_shape(self, points, color, fill=False):
-        """
-        Dibuja una forma basada en una lista de puntos.
-        Parámetros:
-        - points: Lista de tuplas [(x1, y1), (x2, y2), ..., (xn, yn)] que representan los vértices.
-        - color: Color en formato RGB565.
-        - fill: Si es True, llena la forma. Por defecto, False.
-        """
-        if len(points) < 3:
-            raise ValueError("Se necesitan al menos 3 puntos para formar una forma.")
-
-        if fill:
-            # Rellenar la forma usando el algoritmo de escaneo
-            sorted_points = sorted(points, key=lambda p: p[1])  # Ordenar por coordenada Y
+            # Rellenar la figura usando un algoritmo de escaneo
+            sorted_points = sorted(outline_points, key=lambda p: p[1])  # Ordenar por coordenada Y
             y_min = sorted_points[0][1]
             y_max = sorted_points[-1][1]
 
             for y in range(y_min, y_max + 1):
                 intersections = []
-                for i in range(len(points)):
-                    x1, y1 = points[i]
-                    x2, y2 = points[(i + 1) % len(points)]  # Conectar el último punto con el primero
+                for i in range(len(outline_points)):
+                    x1, y1 = outline_points[i]
+                    x2, y2 = outline_points[(i + 1) % len(outline_points)]  # Conectar el último punto con el primero
 
                     # Verificar si la línea cruza la línea de escaneo
                     if y1 <= y < y2 or y2 <= y < y1:
@@ -298,9 +177,184 @@ class LCD_1inch14(framebuf.FrameBuffer):
                         for x in range(x_start, x_end + 1):
                             self.draw_pixel(x, y, color)
         else:
-            # Dibujar los bordes conectando los puntos en orden
-            for i in range(len(points)):
-                x1, y1 = points[i]
-                x2, y2 = points[(i + 1) % len(points)]  # Conectar el último punto con el primero
+            # Dibujar solo los bordes conectando los puntos
+            for i in range(len(outline_points)):
+                x1, y1 = outline_points[i]
+                x2, y2 = outline_points[(i + 1) % len(outline_points)]  # Conectar el último punto con el primero
                 self.draw_line(x1, y1, x2, y2, color)
+
+
+    def draw_circle(self, x0, y0, radius, color, fill=False):
+        """
+        Dibuja un círculo.
+        Parámetros:
+        - x0, y0: Coordenadas del centro del círculo.
+        - radius: Radio en píxeles.
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena el círculo. Por defecto, False.
+        """
+        if fill:
+            # Rellenar el círculo usando la ecuación
+            for y in range(-radius, radius + 1):
+                for x in range(-radius, radius + 1):
+                    if x**2 + y**2 <= radius**2:
+                        self.draw_pixel(x0 + x, y0 + y, color)
+        else:
+            # Dibujar solo los bordes del círculo usando el algoritmo de Bresenham
+            x = 0
+            y = radius
+            d = 3 - 2 * radius
+
+            while x <= y:
+                # Dibujar los puntos en los ocho octantes
+                self.draw_pixel(x0 + x, y0 + y, color)
+                self.draw_pixel(x0 - x, y0 + y, color)
+                self.draw_pixel(x0 + x, y0 - y, color)
+                self.draw_pixel(x0 - x, y0 - y, color)
+                self.draw_pixel(x0 + y, y0 + x, color)
+                self.draw_pixel(x0 - y, y0 + x, color)
+                self.draw_pixel(x0 + y, y0 - x, color)
+                self.draw_pixel(x0 - y, y0 - x, color)
+
+                if d < 0:
+                    d += 4 * x + 6
+                else:
+                    d += 4 * (x - y) + 10
+                    y -= 1
+                x += 1
+
+
+    def draw_square(self, x0, y0, side, color, fill=False):
+        """
+        Dibuja un cuadrado.
+        Parámetros:
+        - x0, y0: Coordenadas de la esquina superior izquierda.
+        - side: Tamaño del lado del cuadrado.
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena el cuadrado. Por defecto, False.
+        """
+        points = [
+            (x0, y0), (x0 + side, y0),
+            (x0 + side, y0 + side), (x0, y0 + side)
+        ]
+        self.draw_generic_shape(points, color, fill)
+
+
+    def draw_triangle(self, x1, y1, x2, y2, x3, y3, color, fill=False):
+        """
+        Dibuja un triángulo.
+        Parámetros:
+        - x1, y1: Coordenadas del primer vértice.
+        - x2, y2: Coordenadas del segundo vértice.
+        - x3, y3: Coordenadas del tercer vértice.
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena el triángulo. Por defecto, False.
+        """
+        points = [(x1, y1), (x2, y2), (x3, y3)]
+        self.draw_generic_shape(points, color, fill)
+
+
+    def draw_shape(self, points, color, fill=False):
+        """
+        Dibuja una forma basada en una lista de puntos.
+        Parámetros:
+        - points: Lista de tuplas [(x1, y1), (x2, y2), ..., (xn, yn)] que representan los vértices.
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena la forma. Por defecto, False.
+        """
+        self.draw_generic_shape(points, color, fill)
+        
+        
+        ## figuras no perfectas rectangulo , ovalo , trapecio
+        
+    def draw_rectangle(self, x0, y0, width, height, color, fill=False):
+        """
+        Dibuja un rectángulo.
+        Parámetros:
+        - x0, y0: Coordenadas de la esquina superior izquierda.
+        - width: Ancho del rectángulo.
+        - height: Alto del rectángulo.
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena el rectángulo. Por defecto, False.
+        """
+        points = [
+            (x0, y0), (x0 + width, y0),
+            (x0 + width, y0 + height), (x0, y0 + height)
+        ]
+        self.draw_generic_shape(points, color, fill)
+
+
+    def draw_oval(self, x0, y0, rx, ry, color, fill=False):
+        """
+        Dibuja un óvalo.
+        Parámetros:
+        - x0, y0: Coordenadas del centro.
+        - rx: Radio horizontal.
+        - ry: Radio vertical.
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena el óvalo. Por defecto, False.
+        """
+        if fill:
+            for y in range(-ry, ry + 1):
+                for x in range(-rx, rx + 1):
+                    # Ecuación del óvalo: (x^2 / rx^2) + (y^2 / ry^2) <= 1
+                    if (x**2 / rx**2) + (y**2 / ry**2) <= 1:
+                        self.draw_pixel(x0 + x, y0 + y, color)
+        else:
+            x = 0
+            y = ry
+            px = 0
+            py = 2 * rx**2 * y
+            points = []
+
+            # Región 1: Incrementa x
+            p1 = ry**2 - (rx**2 * ry) + (0.25 * rx**2)
+            while px < py:
+                points.extend([
+                    (x0 + x, y0 + y), (x0 - x, y0 + y),
+                    (x0 + x, y0 - y), (x0 - x, y0 - y)
+                ])
+                x += 1
+                px += 2 * ry**2
+                if p1 < 0:
+                    p1 += ry**2 + px
+                else:
+                    y -= 1
+                    py -= 2 * rx**2
+                    p1 += ry**2 + px - py
+
+            # Región 2: Incrementa y
+            p2 = ry**2 * (x + 0.5)**2 + rx**2 * (y - 1)**2 - rx**2 * ry**2
+            while y >= 0:
+                points.extend([
+                    (x0 + x, y0 + y), (x0 - x, y0 + y),
+                    (x0 + x, y0 - y), (x0 - x, y0 - y)
+                ])
+                y -= 1
+                py -= 2 * rx**2
+                if p2 > 0:
+                    p2 += rx**2 - py
+                else:
+                    x += 1
+                    px += 2 * ry**2
+                    p2 += rx**2 - py + px
+
+            # Dibujar los bordes del óvalo
+            for px, py in points:
+                self.draw_pixel(px, py, color)
+
+    def draw_trapezoid(self, x1, y1, x2, y2, x3, y3, x4, y4, color, fill=False):
+        """
+        Dibuja un trapecio.
+        Parámetros:
+        - x1, y1: Coordenadas del primer vértice (esquina superior izquierda).
+        - x2, y2: Coordenadas del segundo vértice (esquina superior derecha).
+        - x3, y3: Coordenadas del tercer vértice (esquina inferior derecha).
+        - x4, y4: Coordenadas del cuarto vértice (esquina inferior izquierda).
+        - color: Color en formato RGB565.
+        - fill: Si es True, llena el trapecio. Por defecto, False.
+        """
+        points = [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
+        self.draw_generic_shape(points, color, fill)
+
 
