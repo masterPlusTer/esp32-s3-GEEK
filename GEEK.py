@@ -1,6 +1,8 @@
 from machine import Pin, SPI, PWM
 import framebuf
 import time
+import struct
+
 
 class LCD_1inch14(framebuf.FrameBuffer):
     def __init__(self, bl_pin=7, dc_pin=8, cs_pin=10, sck_pin=12, mosi_pin=11, rst_pin=9):
@@ -368,4 +370,52 @@ class LCD_1inch14(framebuf.FrameBuffer):
         adjusted_color = self._adjust_color(color)  # Ajustar el color si es necesario
         self.text(text, x, y, adjusted_color)  # Dibujar el texto usando framebuf.text()
         self.show()  # Actualizar la pantalla
+
+
+    
+    def draw_bmp(self, file_path, x, y):
+        """
+        Dibuja una imagen BMP en la pantalla con rotación de 180 grados.
+        Parámetros:
+        - file_path: Ruta del archivo BMP.
+        - x, y: Coordenadas superiores izquierda donde comenzará la imagen.
+        """
+        with open(file_path, "rb") as f:
+            # Leer el encabezado BMP (54 bytes)
+            header = f.read(54)
+            if header[:2] != b'BM':
+                raise ValueError("El archivo no es un archivo BMP válido.")
+
+            # Extraer información del encabezado
+            start_pos = int.from_bytes(header[10:14], "little")
+            width = int.from_bytes(header[18:22], "little")
+            height = int.from_bytes(header[22:26], "little")
+            bits_per_pixel = int.from_bytes(header[28:30], "little")
+            compression = int.from_bytes(header[30:34], "little")
+
+            if compression != 0:
+                raise ValueError("El archivo BMP tiene compresión, lo cual no es soportado.")
+            if bits_per_pixel != 24:
+                raise ValueError("Solo se soporta una profundidad de color de 24 bits.")
+
+            # Calcular el tamaño de la fila alineado a 4 bytes
+            row_size = (width * 3 + 3) & ~3
+
+            # Dibujar la imagen
+            for row in range(height):
+                # Leer fila desde el final hacia el principio (invertido verticalmente)
+                f.seek(start_pos + row_size * (height - row - 1))
+                row_data = f.read(row_size)
+
+                for col in range(width):
+                    r, g, b = row_data[col * 3:col * 3 + 3]
+
+                    # Convertir a RGB565
+                    raw_color = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+                    adjusted_color = self._adjust_color(raw_color)  # Ajustar el color
+
+                    # Dibuja el píxel en posición rotada 180 grados
+                    self.draw_pixel(x + (width - 1 - col), y + (height - 1 - row), adjusted_color)
+
+            self.show()  # Actualizar la pantalla
 
