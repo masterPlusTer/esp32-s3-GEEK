@@ -43,6 +43,9 @@ lcd.draw_triangle(50, 50, 150, 50, 100, 100, 0b1111100000000000)  # rojo
 lcd.draw_text(50, 50, "ESTO ES", 0x07E0)  # Texto verde
 lcd.draw_text(120, 70, "UNA PORQUERIA", 0x001F)  # Texto azul
 
+lcd.draw_bmp("ESP32-S3-GEEK.bmp", 0, 0)  # Mostrar BMP en la esquina superior izquierda
+
+
 lcd.show()
 
 
