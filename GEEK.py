@@ -356,5 +356,16 @@ class LCD_1inch14(framebuf.FrameBuffer):
         """
         points = [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
         self.draw_generic_shape(points, color, fill)
-
+    
+    def draw_text(self, x, y, text, color):
+        """
+        Dibuja texto en la pantalla.
+        Parámetros:
+        - x, y: Coordenadas de la esquina superior izquierda donde comenzará el texto.
+        - text: Cadena de texto a dibujar.
+        - color: Color en formato RGB565.
+        """
+        adjusted_color = self._adjust_color(color)  # Ajustar el color si es necesario
+        self.text(text, x, y, adjusted_color)  # Dibujar el texto usando framebuf.text()
+        self.show()  # Actualizar la pantalla
 
