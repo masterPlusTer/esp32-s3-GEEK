@@ -13,7 +13,7 @@ esto esta en construccion, sepan disculpar el desorden
 
 ################################################################################################################################################################
 
-# Documentación de la librería LCD_1inch14 para MicroPython
+# Documentación de la librería GEEK.py para MicroPython
 
 ## Introducción
 Esta librería permite controlar una pantalla LCD de 1.14 pulgadas utilizando MicroPython. Ofrece funciones para inicializar el dispositivo, manejar el brillo, dibujar figuras geométricas, mostrar texto e imágenes, y realizar tareas de visualización. Es ideal para usuarios que deseen implementar interfaces gráficas en proyectos embebidos.
@@ -37,7 +37,7 @@ LCD_1inch14(bl_pin=7, dc_pin=8, cs_pin=10, sck_pin=12, mosi_pin=11, rst_pin=9)
 
 #### Ejemplo
 ```python
-from LCD_1inch14 import LCD_1inch14
+from GEEK import LCD_1inch14
 lcd = LCD_1inch14()
 ```
 
