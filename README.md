@@ -203,6 +203,5 @@ lcd.show()
    - 6 bits para verde.
    - 5 bits para azul.
 
-2. Asegúrese de que los pines utilizados estén correctamente conectados al microcontrolador.
-3. La biblioteca está diseñada para pantallas basadas en controladores ST7789.
+2.  La biblioteca está diseñada para pantallas basadas en controladores ST7789.
 
