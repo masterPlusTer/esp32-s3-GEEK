@@ -134,7 +134,7 @@ lcd.draw_square(10, 10, 50, 0x07E0, fill=True)  # Cuadrado verde relleno
 
 ---
 
-### 4. Dibujar texto
+### 4.  Texto
 ```python
 lcd.draw_text(x, y, text, color)
 ```
@@ -182,7 +182,7 @@ lcd.fill_color(0x0000)  # Pantalla completamente negra
 ## Código de ejemplo completo
 
 ```python
-from LCD_1inch14 import LCD_1inch14
+from GEEK import LCD_1inch14
 lcd = LCD_1inch14()
 
 # Configurar brillo
