@@ -374,10 +374,9 @@ class LCD_1inch14(framebuf.FrameBuffer):
 
     def draw_bmp(self, file_path, x, y):
         """
-        Dibuja una imagen BMP en la pantalla con rotación de 180 grados y soporte para LCD con orden BGR.
+        Dibuja una imagen BMP en la pantalla con ajustes corregidos para RGB565 y rotación de 180 grados.
         """
         def le_bytes_to_int(bytes):
-            """Convierte bytes en formato little-endian a entero."""
             return struct.unpack('<I', bytes)[0]
 
         with open(file_path, "rb") as f:
@@ -403,7 +402,7 @@ class LCD_1inch14(framebuf.FrameBuffer):
             # Calcular el tamaño de la fila alineado a 4 bytes
             row_size = (width * 3 + 3) & ~3
 
-            # Dibujar la imagen
+            # Dibujar la imagen con rotación de 180 grados
             for row in range(height):
                 # Leer fila desde el final hacia el principio (invertido verticalmente)
                 f.seek(start_pos + row_size * (height - row - 1))
@@ -411,25 +410,17 @@ class LCD_1inch14(framebuf.FrameBuffer):
 
                 for col in range(width):
                     # Extraer valores b, g, r
-                    b, g, r = row_data[col * 3:col * 3 + 3]
+                    r, b, g = row_data[col * 3:col * 3 + 3]
 
-                    # Revisar la lógica de conversión a RGB565 con ajustes
-                    red = (r & 0xF8) >> 3   # 5 bits para rojo
-                    green = (g & 0xFC) << 3  # 6 bits para verde
-                    blue = (b & 0xF8) << 8   # 5 bits para azul
-
-                    # Combinar los bits en un solo valor de 16 bits RGB565
-                    raw_color = red | green | blue
-
-                    # Ajustar para little-endian
-                    raw_color = ((raw_color & 0xFF) << 8) | ((raw_color >> 8) & 0xFF)
-
-                    # Coordenadas ajustadas para rotación de 180 grados
+                    # Ajustar los colores con los valores encontrados
+                    
+                    raw_color = ((b & 0b11111000) >> 0)  | ((r & 0b11111000) >> 5) |  ((g & 0b11111100) << 6)
+                 
+                    # Calcular las coordenadas rotadas 180 grados
                     rot_x = x + (width - 1 - col)
                     rot_y = y + (height - 1 - row)
 
-                    # Dibuja el píxel en la posición rotada
+                    # Dibujar el píxel en su posición rotada
                     self.draw_pixel(rot_x, rot_y, raw_color)
 
             self.show()  # Actualizar la pantalla
-
